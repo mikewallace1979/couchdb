@@ -97,17 +97,15 @@ open(Db, State) ->
                     % Matching view signatures.
                     NewSt = couch_mrview_util:init_state(Db, Fd, State, Header),
                     {ok, RefCounter} = couch_ref_counter:start([Fd]),
-                    {ok, NewSt#mrst{refc=RefCounter}};
+                    {ok, NewSt#mrst{fd_monitor=erlang:monitor(process, Fd)}};
                 % end of upgrade code for <= 1.2.x
                 {ok, {Sig, Header}} ->
                     % Matching view signatures.
                     NewSt = couch_mrview_util:init_state(Db, Fd, State, Header),
-                    {ok, RefCounter} = couch_ref_counter:start([Fd]),
-                    {ok, NewSt#mrst{refc=RefCounter}};
+                    {ok, NewSt#mrst{fd_monitor=erlang:monitor(process, Fd)}};
                 _ ->
                     NewSt = couch_mrview_util:reset_index(Db, Fd, State),
-                    {ok, RefCounter} = couch_ref_counter:start([Fd]),
-                    {ok, NewSt#mrst{refc=RefCounter}}
+                    {ok, NewSt#mrst{fd_monitor=erlang:monitor(process, Fd)}}
             end;
         {error, Reason} = Error ->
             ?LOG_ERROR("Failed to open view file '~s': ~s",
@@ -117,6 +115,7 @@ open(Db, State) ->
 
 
 close(State) ->
+    erlang:demonitor(State#mrst.fd_monitor, [flush]),
     couch_file:close(State#mrst.fd).
 
 
